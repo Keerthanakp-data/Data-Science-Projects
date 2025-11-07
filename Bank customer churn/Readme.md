@@ -66,7 +66,7 @@ High Churn Risk Segments:
 
 - Having multiple products ( credit cards, saving etc) reduces churn indicating that cross-selling can be a strong retention strategy.
 
-# Recommended Actions
+## Recommended Actions
 - Build retention campaign targeting the high risk customers with personalized offers.
 - Develop re engagement programs such as rewards for regular transactions or account usage.
 - Adding more products like cross-selling credit cards
