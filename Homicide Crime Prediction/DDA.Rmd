@@ -1,0 +1,715 @@
+---
+title: "coursework"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-03-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+
+```{r}
+
+library(dplyr)
+library(validate)
+library(ggplot2)
+library(scales)
+library(papaja)
+library(GGally)
+library(caret)
+library(FactoMineR)
+library(factoextra)
+#### 1. Installing   random forest packages{#Install_packages}
+# install the tree and randomForest packages from CRAN
+if(require(tree) == FALSE){
+  install.packages('tree')
+  library(tree)
+}
+if(require(randomForest) == FALSE){
+  install.packages('randomForest')
+  library(randomForest)
+}
+
+if(require(caret) == FALSE){
+  install.packages('caret', dependencies = TRUE)
+  library(caret)
+}
+if(require(rpart) == FALSE){
+  install.packages('rpart')
+  library(rpart)
+}
+if(require(ROCR) == FALSE){
+  install.packages('ROCR')
+  library(ROCR)
+}
+```
+
+# Data exploration and preparation
+# Loading the original dataset as a dataframe
+
+```{r}
+df <- read.csv("Homicide.csv")
+```
+
+# Geting the dimensions of data
+
+```{r}
+nrow(df)
+ncol(df)
+```
+
+Explore the dataframe
+```{r}
+View(df)
+head(df)
+```
+
+# Sub setting the original dataset
+# Since we are considering only subsample of data where the crime records are from 2000 to 2022
+```{r}
+crime_2000 <- subset(df, Year >= 2000)
+```
+
+# Get the dimensions of data
+```{r}
+nrow(crime_2000)
+ncol(crime_2000)
+```
+
+# Exploring the dataframe
+```{r}
+head(crime_2000)
+colnames(crime_2000)
+```
+
+# Exploring the variables
+```{r}
+str(crime_2000) 
+summary(crime_2000)
+```
+
+#...........................Data preprocessing and Cleaning................................#
+
+# 1...Removing unnecessary columns 
+# ----> agency identification key,agency code,case identification by agency,file recorded date
+
+```{r}
+crime_2000[, c('ID','Ori','Agency','Incident','Source','FileDate','MSA')] <- list(NULL)
+```
+
+
+# 2...Modifying the 'CNTYFIPS' to create new variable to have county name where the crime happned
+```{r}
+lst_county<- strsplit(crime_2000$CNTYFIPS,",")  # split the variable by delimiter(,)
+crime_2000$County<- sapply(lst_county,`[`,1)
+crime_2000$CNTYFIPS <- NULL  # drop the original
+```
+
+# 3...Renaming the columns - renamimng some columns meaningfully and so that it is easy to understand
+
+```{r}
+cols_to_rename<- c("Agentype","ActionType","Homicide","Situation","VicAge","VicSex","VicRace","VicEthnic",
+                   "OffAge","OffSex","OffRace","OffEthnic","Circumstance","Subcircum","VicCount","OffCount")
+
+rename_cols_into <- c("Agency_type","Report_status","Crime_type","Crime_status","Victim_age","Victim_sex",
+                      "Victim_race","Victim_ethnicity","Offender_age","Offender_sex","Offender_race",
+                      "Offender_ethnicity","Crime_cause","Victim_prior_offense_status","add_victim_count","add_offender_count")
+
+crime_2000<- crime_2000 %>% 
+  rename_with(~rename_cols_into,all_of(cols_to_rename))
+```
+
+# New modified column names
+```{r}
+colnames(crime_2000)
+```
+
+
+# 4....converting the categorical variables with defined levels into factors for 
+#       accurate representation and enhancing analytical usability and explore for any inconsistencies in the levels
+
+```{r}
+cat_col_names<- c("Agency_type","Solved","Month","Report_status","Crime_type","Crime_status","Victim_sex",
+                  "Victim_race","Victim_ethnicity","Offender_sex","Offender_race",
+                  "Offender_ethnicity","Weapon","Relationship","Crime_cause","Victim_prior_offense_status") 
+
+crime_2000 <- crime_2000 %>%
+  mutate(across(all_of(cat_col_names), as.factor))
+```
+
+
+#Generating frequency table for each categorical variable
+```{r}
+crime_cat_table <- apply(crime_2000[, cat_col_names], 2, table)
+crime_cat_table
+```
+
+#Note : 
+#'Victim_sex','Victim_race','Victim_ethnicity','Offender_sex',
+#''Offender_race','Offender_ethnicity' have a 'Unknown' category
+
+# proportional tables for Victim and offender sex,race and ethnicity
+```{r}
+cols<- c('Victim_sex','Victim_race','Victim_ethnicity','Offender_sex','Offender_race','Offender_ethnicity')
+cat_prop_table <- lapply(crime_2000[,cols], function(x) prop.table(table(x)))
+cat_prop_table
+```
+
+
+#Re categorizing the 'unknown' categories from Victim_sex,offender sex as missing since the % is very low
+```{r}
+crime_2000$Victim_sex[crime_2000$Victim_sex=='Unknown'] <- NA
+crime_2000$Offender_sex[crime_2000$Offender_sex=='Unknown'] <- NA
+```
+
+
+# Removing the ethnicity for both offender and victim as more than 50% of data for the column is 'unknown' or missing.
+```{r}
+crime_2000[, c('Victim_ethnicity','Offender_ethnicity')] <- list(NULL)
+```
+
+
+
+#Renaming selected categorical variable levels due to unnecessary information or lengthy descriptions
+
+#Weapon
+```{r}
+crime_2000$Weapon<- dplyr::recode(crime_2000$Weapon,
+                                  'Asphyxiation - includes death by gas'='Suffocation',
+                                  'Blunt object - hammer, club, etc'='Blunt object',
+                                  'Firearm, type not stated'='Firearm',
+                                  'Handgun - pistol, revolver, etc'='Handgun',
+                                  'Knife or cutting instrument' = 'Knife/Blade',
+                                  'Narcotics or drugs, sleeping pills'= 'Narcotics',
+                                  'Other or type unknown'= 'Unspecified',
+                                  'Personal weapons, includes beating'='Personal weapons/Assaultive',
+                                  'Poison - does not include gas'='Poison',
+                                  'Pushed or thrown out window'='Pushed/thrown out window',
+                                  'Strangulation - hanging'='Strangulation/Hanging',
+                                  'Weapon Not Reported'='Unknown')
+```
+
+
+#Relationship
+```{r}
+crime_2000$Relationship<- dplyr::recode(crime_2000$Relationship,
+                                        'Homosexual relationship'='Homosexual',
+                                        'Relationship not determined'='Unknown',
+                                        'Other - known to victim'= 'known to victim')
+                                        
+```
+
+#Crime Cause
+```{r}
+crime_2000$Crime_cause<- dplyr::recode(crime_2000$Crime_cause,
+                                       'All other manslaughter by negligence'='Unintentional manslaughter',
+                                       'Argument over money or property'='Arguments(money or property)',
+                                       'Brawl due to influence of alcohol'='alcohol-induced fights',
+                                       'Brawl due to influence of narcotics'='Narcotic-induced fights',
+                                       'Child killed by babysitter'='Babysitter fatality',
+                                       'Children playing with gun'='Child-involved firearm incident',
+                                       'Gun-cleaning death - other than self'='Accidental gun cleaning fatality',
+                                       'Narcotic drug laws' ='Narcotic usage',
+                                       'Other - not specified'='Other',
+                                       'Other negligent handling of gun' = 'Other negligent gun handelling',
+                                       'Prostitution and commercialized vice'='commercialized prostitution',
+                                       'Victim shot in hunting accident' = 'Hunting related',
+                                       'Circumstances undetermined'='Unknown')
+```
+
+#Victim_prior_offense_status - recode level with the empty string
+```{r}
+levels(crime_2000$Victim_prior_offense_status)[1] <- "Not specified"
+table(crime_2000$Victim_prior_offense_status)
+```
+
+
+
+# 5 .....Exploring the numerical variables
+```{r}
+num_col_names<- c('Victim_age','Offender_age','Year','add_victim_count','add_offender_count')
+
+#Generate summaries for each numerical variable
+crime_num_summaries <- apply(crime_2000[, num_col_names], 2, summary)
+crime_num_summaries
+```
+
+
+
+# 6........Applying validation rules to assess the variable constraints
+```{r}
+val_rules<- validator(ok_solved = is.element(Solved,c("Yes","No")),
+                      non_neg_vicAge = Victim_age>=0 & Victim_age<100,
+                      ok_vicsex= is.element(Victim_sex,c('Female','Male','Unknown')),
+                      ok_vicrace= is.element(Victim_race,c("American Indian or Alaskan Native","Asian","Black","Native Hawaiian or Pacific Islander","Unknown","White")),
+                      ok_viceth= is.element(Victim_ethnicity,c('Hispanic','Not Hispanic','Unknown')),
+                      
+                      non_neg_OffAge = Offender_age>5 & Offender_age<100,
+                      ok_offrace= is.element(Offender_race,c("American Indian or Alaskan Native","Asian","Black","Native Hawaiian or Pacific Islander","Unknown","White")),
+                      ok_offeth= is.element(Offender_ethnicity,c('Hispanic','Not Hispanic','Unknown')),
+                      
+                      ok_add_viccount = add_victim_count>=0 & add_victim_count<=10,  
+                      ok_add_offcount = add_offender_count>=0 & add_offender_count<=10  
+)
+qual_check <- confront(crime_2000,val_rules)
+summary(qual_check)
+
+
+avc<- violating(crime_2000, qual_check["ok_add_viccount"])
+avc
+
+aofc<- violating(crime_2000, qual_check["ok_add_offcount"])
+aofc
+
+
+vc_age<- violating(crime_2000, qual_check["non_neg_vicAge"])
+vc_age
+
+of_age<- violating(crime_2000, qual_check["non_neg_OffAge"])
+of_age
+```
+
+
+# 7......Issues identified from the validation
+```{r}
+#Victim Age - Missing is indicated as 999 in Victim Age columns
+
+crime_2000$Victim_age[crime_2000$Victim_age==999] <- NA
+summary(crime_2000$Victim_age)
+
+#Offender Age - Outlier detection
+
+# Explore the records offender age >90
+#crime_2000[crime_2000$Offender_age>=90, ]
+nrow(crime_2000[crime_2000$Offender_age>=90 & crime_2000$Offender_age<100, ]) #289
+
+# Explore the records offender age <5
+#crime_2000[crime_2000$Offender_age<5, ]
+nrow(crime_2000[crime_2000$Offender_age<5, ]) #568
+
+
+# Remove implausible records for offender Age
+crime_2000$Offender_age[crime_2000$Offender_age>=90 | crime_2000$Offender_age<2 ]<- NA
+summary(crime_2000$Offender_age)
+
+```
+
+# 8......Missing value analysis
+```{r}
+count_miss<- colSums(is.na(crime_2000))
+count_miss
+
+# Calculate the percentages of missing values in each column relative to the available number of data points.
+perct_miss<- round(colMeans(is.na(crime_2000),2)*100)
+perct_miss
+
+# No missings excepts for the age columns generated from coded categories(999) and 'Unknown' in categorical categories
+
+```
+
+# 9.......Exploring for any duplicates.
+
+```{r}
+# Check for any duplicated rows/records
+duplicated_df <- crime_2000[duplicated(crime_2000), ]
+paste("Number of duplicated records found : ", nrow(duplicated_df)) #4472
+
+#write.csv(duplicated_df,"data-v2/duplicated.csv")
+
+# remove the duplicated records
+crime_dedup<- unique(crime_2000)
+dim(crime_dedup) 
+
+```
+
+# 10.......Removing all the missing values and create the cleaned dataset
+```{r}
+crime_cleaned<- crime_dedup[complete.cases(crime_dedup),]#
+dim(crime_cleaned)
+
+#write.csv(crime_cleaned,"data-v2/cleaned.csv",row.names = FALSE)
+#colnames(crime_cleaned)
+```
+
+# 10.......Creating a new target variable Offender_demo by grouping gender and age which were the original tagret variables
+```{r}
+crime_cleaned <- crime_cleaned %>%
+  mutate(Offender_demo = case_when(
+    crime_cleaned$Offender_age<19 & crime_cleaned$Offender_sex=="Male" ~ "<18M",
+    crime_cleaned$Offender_age<19 & crime_cleaned$Offender_sex=="Female" ~ "<18F",
+    crime_cleaned$Offender_age<56 & crime_cleaned$Offender_sex=="Male" ~ "19-55M",
+    crime_cleaned$Offender_age<56 & crime_cleaned$Offender_sex=="Female" ~ "19-55F",
+    crime_cleaned$Offender_age<90 & crime_cleaned$Offender_sex=="Male" ~ ">56M",
+    crime_cleaned$Offender_age<90 & crime_cleaned$Offender_sex=="Female" ~ ">56F",
+    
+    TRUE ~ "Other"
+  ))
+crime_cleaned$Offender_demo <- as.factor(crime_cleaned$Offender_demo)
+
+colnames(crime_cleaned)
+file_path <- "C:\\Users\\keert\\OneDrive\\Desktop\\mc1\\cleaned_data.csv"
+write.csv(crime_cleaned,file = file_path,row.names = FALSE)
+```
+
+
+##...............................Exploratory Data Analysis....................................................
+
+# 10.....univariate analysis......
+#Exploring the univariate numeric data graphically 
+
+```{r}
+opar <- par(no.readonly = TRUE)
+par(mfrow = c(2,3))
+hist(crime_cleaned[, 4], main = names(crime_cleaned)[4], xlab = names(crime_cleaned)[4], xlim = c(0,100))
+hist(crime_cleaned[, 9], main = names(crime_cleaned)[9], xlab = names(crime_cleaned)[9], xlim = c(0,100))
+hist(crime_cleaned[, 12], main = names(crime_cleaned)[12], xlab = names(crime_cleaned)[12], xlim = c(0,100))
+hist(crime_cleaned[, 19], main = names(crime_cleaned)[19], xlab = names(crime_cleaned)[19], xlim = c(0,100))
+hist(crime_cleaned[, 20], main = names(crime_cleaned)[20], xlab = names(crime_cleaned)[20], xlim = c(0,100))
+
+par(opar)
+
+
+```
+
+#Exploring the univariate analysis for categorical variables 
+```{r}
+
+ggplot(crime_cleaned, aes(x=factor(Agency_type))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("agency_type") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Solved))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("solved") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Crime_type))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("crime type") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Crime_status))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("crime status") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Victim_sex))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("victim sex") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Victim_race))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("victim race") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Offender_race))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("offender race") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Relationship))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("relationship") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Weapon))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("weapon") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Crime_cause))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("crime cause") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Victim_prior_offense_status))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("agency_type") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(State))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("state") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Month))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("month") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Report_status))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("agency_type") + ylab("Counts")
+
+ggplot(crime_cleaned, aes(x=factor(Offender_demo))) + geom_bar(color = 'blue',fill='blue',alpha = 1) + xlab("offender demographics") + ylab("Counts")
+
+
+```
+
+### 11.Exploring the bivariate analysis for the variables
+
+#Exploring the relationship between Offender demo(target variable) with other variables
+#categorical/binary VS categorical
+
+```{r}
+#bar plot of Offender demo and agency type
+ggplot(crime_cleaned, aes(x = Agency_type, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Agency type", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of Offender demo and crime type
+ggplot(crime_cleaned, aes(x = Crime_type, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot for offender demo and crime status
+
+ggplot(crime_cleaned, aes(x = Crime_status, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime status", y = "Count", title = "Grouped Bar Plot")
+
+
+#bar plot for offender demo and victim sex
+ggplot(crime_cleaned, aes(x = Victim_sex, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Victim_sex", y = "Count", title = "Grouped Bar Plot")
+
+#box plot for offender demo and victim race
+ggplot(crime_cleaned, aes(x = Victim_race, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Victim_race", y = "Count", title = "Grouped Bar Plot")
+
+
+#bar plot of Offender demo and weapon
+ggplot(crime_cleaned, aes(x = Weapon, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Weapon", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of Offender demo and relationship
+ggplot(crime_cleaned, aes(x = Relationship, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Relationship", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of Offender demo and crime cause
+ggplot(crime_cleaned, aes(x = Crime_cause, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime cause", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of Offender demo and victim prior offense status
+ggplot(crime_cleaned, aes(x = Victim_prior_offense_status, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Victim_prior_offense_status", y = "Count", title = "Grouped Bar Plot")
+
+
+#bar plot of Offender demo and county
+ggplot(crime_cleaned, aes(x = County, fill = Offender_demo)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "County", y = "Count", title = "Grouped Bar Plot")
+
+
+#box plot of Offender demo and victim age
+ggplot(crime_cleaned, aes(x = Offender_demo, y = Victim_age )) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Offender_demo vs Victim age ",
+       x = "Offender_demo", y = "Victim age")
+
+#box plot of Offender demo and year
+ggplot(crime_cleaned, aes(x = Offender_demo, y = Year )) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Offender_demo vs Victim age ",
+       x = "Offender_demo", y = "Year")
+```
+# 12.Additional graphs
+```{r}
+
+#bar plot of crime type and agency type
+ggplot(crime_cleaned, aes(x = Crime_type, fill = Agency_type)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of crime type and agency type and solved
+ggplot(crime_cleaned, aes(x = Crime_type, fill = Solved)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of crime type and weapon
+ggplot(crime_cleaned, aes(x = Crime_type, fill = Weapon)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+#bar plot of crime type and state
+ggplot(crime_cleaned, aes(x = Crime_type, fill = State)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+#box plot of crime type and victim age
+ggplot(crime_cleaned, aes(x = Crime_type, y = Victim_age )) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Offender_demo vs Victim age ",
+       x = "Crime_type", y = "Victim_age")
+
+#bar plot of crime type and relationship
+ggplot(crime_cleaned, aes(x = Crime_type, fill = Relationship)) +
+  geom_bar(position = "dodge", color = "black") +
+  theme_minimal() +
+  labs(x = "Crime type", y = "Count", title = "Grouped Bar Plot")
+
+
+```
+#13 Multivariate analysis
+```{r}
+cont_col<- c('Year','Offender_age','Victim_age','add_victim_count','add_offender_count')
+df_cont<- crime_cleaned[,cont_col]
+ggcorr(df_cont, method = c("pairwise", "pearson"),label = TRUE,label_color = "white",low="lightblue",mid ="steelblue",high="darkblue" )+
+  theme_void()+
+  ggtitle("Correlation coefficients of numerical variables")
+```
+
+```{r}
+cat_col_names<- c("Agency_type","Month","Report_status","Crime_type","Crime_status","Victim_sex",
+                  "Victim_race","Offender_sex","Offender_race","Weapon","Relationship","Crime_cause","Victim_prior_offense_status","County","Offender_demo") 
+
+df <- crime_cleaned %>%
+  mutate(across(all_of(cat_col_names), as.factor))
+
+#Drop the target variable and offender age and sex
+df_input<- subset(df,select = -c(Offender_demo,Offender_sex,Offender_age))
+```
+
+#.................................PCA......................#
+```{r}
+#Encode the categorical/factor variables
+dummy<- dummyVars(" ~ .", data=df_input)
+
+encoded_df<- data.frame(predict(dummy,newdata=df_input))
+head(encoded_df)
+#View(encoded_df)
+
+pc_crime <- prcomp(encoded_df, center = T, scale. = T,rank. = 10)  # create only 5 PCS
+pc_crime
+
+
+attributes(pc_crime)
+
+# Obtained explained variance
+pc_crime_var <- pc_crime$sdev^2
+pc_crime_var
+
+pc_crime_PEV <- pc_crime_var / sum(pc_crime_var)
+pc_crime_PEV
+
+
+#Variance plot
+plot(pc_crime)
+
+#PCA loadings
+pc_crime_loadings <- pc_crime$rotation
+pc_crime_loadings
+
+#PCA scores
+scores_df<- pc_crime$x
+scores_df
+
+
+#plot scree plot 
+
+var_df<- data.frame(PC= paste0("PC",1:5),
+                    PEV = pc_crime_PEV)
+
+var_df %>%
+  ggplot(aes(PC, PEV)) + 
+  geom_col()+
+  xlab("Principal Component") + 
+  ylab("Variance Explained") +
+  ggtitle("Scree Plot")
+
+
+#Plot the biplot
+opar <- par(no.readonly = TRUE)
+par(mfrow = c(2,2))
+biplot(
+  pc_crime,
+  scale = 0,
+  col = c('grey40','orange')
+)
+biplot(
+  pc_crime,
+  choices = c(1,3),
+  scale = 0,
+  col = c('grey40','orange')
+)
+biplot(
+  pc_crime,
+  choices = c(2,3),
+  scale = 0,
+  col = c('grey40','orange')
+)
+par(opar)
+
+
+#Note : PCA variance/scores are not good with this approach
+
+
+
+
+#.............Alternative to prcomp()
+#................Factor Analysis of Mixed Data...................#
+
+# set graph = FALSE if the plots are not needed
+crime_famd <- FAMD(df_input,graph=TRUE)  
+
+#To generate the PCA scores
+head(crime_famd$ind$coord)
+
+# To generate the squared loadings of the variables
+crime_famd$var$coord
+
+# Generate the screeplot
+fviz_eig(crime_famd)
+
+fviz_eig(crime_famd,geom = 'line')
+
+```
+
+
+##........................................Data Modelling...................................................
+```{r}
+# set random seed
+set.seed(1999)
+# creating a 70/30 training/test set split
+n_rows <- nrow(crime_cleaned)
+# sample 70% (n_rows * 0.7) indices in the ranges 1:nrows
+training_idx <- sample(n_rows, n_rows * 0.7)
+# filtering the data frame with the training indices (and the complement)
+training_crime_cleaned <- crime_cleaned[training_idx,]
+test_crime_cleaned <- crime_cleaned[-training_idx,]
+```
+
+# 13 Random forest training{#Random_forest_training}
+
+```{r}
+
+## defining a formula for predicting Offender demographics that is age and gender
+crime_cleaned_formula = Offender_demo ~ State + Agency_type + Solved + Year + Month + Crime_type +                                         Crime_status + Victim_age + Victim_sex + Victim_race + Weapon + Relationship +                                        Crime_cause + Victim_prior_offense_status + County
+# training a model with random forest
+#   note: number of trees is set to 300
+#     and calculation of attributes importance is requested
+rf_crime_cleaned  <- randomForest(crime_cleaned_formula, ntree = 300, importance = T, data =training_crime_cleaned)
+
+# ploting  the error rates
+#    the labels for the legend are extracted from the rf object
+#     and they include Out-of-bag (OOB) error. OOB is the average error
+#     calculated for each point using only trees that were not trained
+#     using that point
+plot(rf_crime_cleaned)
+legend("topright", legend = colnames(rf_crime_cleaned$err.rate), bty = "n", col = "black")
+
+# plot the variable importancea according to the
+varImpPlot(rf_crime_cleaned, type = 1)
+```
+
+#### 14. Random forest prediction{#Random_forest_prediction}
+```{r}
+# computing the prediction for the random forest model
+#   note: the Sales attribute (column 1) is excluded from the test data set
+rf_crime_cleaned_pred <- predict(rf_crime_cleaned, test_crime_cleaned[,-22], type= "class")
+
+# creating a contingency table for the actual VS predicted for the random forest model
+rf_results_table <- table(rf = rf_crime_cleaned_pred,  actual = test_crime_cleaned$Offender_demo)
+rf_results_table
+
+# calculating accuracy from each contigency table
+#   as sum of diagonal elements over sum of the matrix values
+acc_rf <- sum(diag(rf_results_table)) / sum(rf_results_table)
+acc_rf
+```
+#### 6. Performance evaluation{#Performance_evaluation}
+```{r}
+rf_confmat <- confusionMatrix(data = rf_crime_cleaned_pred, reference = test_crime_cleaned$Offender_demo, positive = "True")
+rf_confmat
+```
+
+
