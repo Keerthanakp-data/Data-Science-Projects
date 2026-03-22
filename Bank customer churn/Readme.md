@@ -128,10 +128,10 @@ High-Risk Customer Segments & Recommended Actions:
   Risk level: High
   Action: Cross-sell credit cards, savings accounts, investment products — the data shows multi-product   customers churn significantly less
   
--Segment 3 — Inactive members
+- Segment 3 — Inactive members
   Risk level: High
   Action: Re-engagement campaign — transaction rewards, cashback offers, digital banking incentives
-  Segment 4 — German customers
+- Segment 4 — German customers
   Risk level: Moderate-High
   Action: Regional product review — churn rate is approximately double France and Spain, suggesting a product-market mismatch rather than individual customer issue
   
