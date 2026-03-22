@@ -49,7 +49,7 @@ This dataset is sourced from Kaggle and contains 10000 rows and 18 columns.The d
 
 ## 🔍 Project Workflow
 
-1. Data Quality Checks & Cleaning
+## 1. Data Quality Checks & Cleaning
 
 Checked all 18 columns for missing values, duplicates, and irrelevant features
 Dropped non-predictive identifiers: RowNumber, CustomerId, Surname
@@ -57,24 +57,27 @@ Encoded categorical variables (Geography, Gender) using label encoding
 Scaled numerical features (Balance, CreditScore, EstimatedSalary) using StandardScaler
 
 
-2. Data Leakage Discovery & Resolution ⚠️
+## 2. Data Leakage Discovery & Resolution ⚠️
 
 This is the most commercially important decision in the project.
 
 During model development, initial accuracy came back at 99% — which immediately raised a red flag. After investigation, the Complain variable was identified as the cause of data leakage.
+
 What data leakage means in this context:
 The Complain variable records whether a customer raised a complaint. In reality, complaints and churn happen simultaneously — a customer complains as they are leaving, not weeks before. This means in a real deployment scenario, the model would never have access to this variable at prediction time. It was learning a pattern it wouldn't know in production.
+
 Fix applied:
 The Complain variable was removed from the feature set entirely. Post-correction accuracy settled at 86% — a lower number, but one that reflects genuine predictive power rather than a data artefact.
 Before leakage fix:  99% accuracy  ← looks impressive, completely unreliable in production
 After leakage fix:   86% accuracy  ← honest, deployable, trustworthy
 This distinction between a model that looks good on paper and one that works in a real environment is one of the most critical judgements in applied data science.
 
-3. Exploratory Data Analysis (EDA)
+## 3. Exploratory Data Analysis (EDA)
+
 Key findings from statistical analysis and visualisation:
 FindingBusiness ImplicationCustomers aged 40–50 churn at significantly higher ratesTarget this age group with premium account offers and personalised outreachSingle-product customers churn mostCross-selling is a retention strategy — customers with 2–3 products churn far lessInactive members are far more likely to churnRe-engagement programme needed — rewards for regular transactionsGerman customers churn at ~2x the rate of French/SpanishRegional product-market mismatch — review German product offeringHigh balance customers churn more than expectedCounter-intuitive — suggests competitor products may be more attractive for wealthy customers
 
-4. Feature Engineering
+## 4. Feature Engineering
 
 Encoded Geography (France=0, Germany=1, Spain=2) and Gender (Male=0, Female=1)
 Removed Complain due to data leakage (see above)
