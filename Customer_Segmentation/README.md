@@ -43,11 +43,10 @@ This dataset is sourced from Kaggle and contains 1000 rows and 9 columns.The dat
 
 - Created RFM Metrics and Customer Life Time Value
 - RFM Metrics
- Recency: How recently a customer purchased
- Frequency: How often they purchase
- Monetary: How much they spend
-RFM is a widely used framework for understanding customer engagement and value.
-
+  Recency: How recently a customer purchased
+  Frequency: How often they purchase
+  Monetary: How much they spend
+  RFM is a widely used framework for understanding customer engagement and value.
 - Customer Lifetime Value (CLV)
  CLV estimates the long-term revenue a customer is expected to generate.
  Combining CLV with RFM provides a deeper understanding of customer value.
@@ -58,7 +57,7 @@ RFM is a widely used framework for understanding customer engagement and value.
 
  Elbow method and Silhouette score were used to determine the number of clusters for KMeans Clustering.
  The elbow curve showed a noticeable bend around K = 4 .
- Silhouette scores peaked at k = 2 , but k = 4 provided a better balance between mathematical            separation and business interpretability.
+ Silhouette scores peaked at k = 2 , but k = 4 provided a better balance between mathematical separation  and business interpretability.
  Final K=4 clusters were chosen
 
 - Cluster Visualization
@@ -69,7 +68,7 @@ RFM is a widely used framework for understanding customer engagement and value.
 
 ## Key/Business Insights
 - Four customer segments with clear behavioral differences
-- High values customers contribute disproportionately to revenue around 230k, freqent purchases , longest
+- High values customers contribute disproportionately to revenue around 230k, frequent purchases, longest
   membership and low recency.
 - At risk customers showed low frequency and high recency.
 - Mid values customers offer strong growth potential
