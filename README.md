@@ -5,12 +5,12 @@ This repository showcases projects that demonstrate my skills in Data analysis, 
 ## 📊 SQL Projects
 
 Chocolate Sales Analysis (SQL)
-• Analyzed regional sales patterns to identify top‑performing products and seasonal demand.
-• Delivered insights that support inventory planning and targeted promotions.
+- Analyzed regional sales patterns to identify top‑performing products and seasonal demand.
+- Delivered insights that support inventory planning and targeted promotions.
 
 Spotify Churn Analysis (SQL)
-• Investigated churn behavior using segmentation and retention metrics.
-• Highlighted high‑risk user groups to guide data‑driven retention strategies.
+- Investigated churn behavior using segmentation and retention metrics.
+- Highlighted high‑risk user groups to guide data‑driven retention strategies.
 
 ## 🤖 Machine Learning Projects
 
