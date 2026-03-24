@@ -22,7 +22,7 @@ This repository showcases projects that demonstrate my skills in Data analysis, 
 - Built regression models to estimate fair vehicle prices using engineered features.
 - Improved pricing accuracy to support transparent and data‑driven valuation.
 
-### ** [Breast Cancer Prediction (Classification)]https://github.com/Keerthanakp-data/Data-Science-Projects/tree/main/Breast-Cancer%20Prediction
+### ** [Breast Cancer Prediction (Classification)](https://github.com/Keerthanakp-data/Data-Science-Projects/tree/main/Breast-Cancer%20Prediction)
 - Developed ML classifiers to support early cancer detection using diagnostic features.
 - Achieved strong predictive performance to assist clinical decision‑making.
 
