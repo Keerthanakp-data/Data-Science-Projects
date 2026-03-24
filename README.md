@@ -4,7 +4,7 @@ This repository showcases projects that demonstrate my skills in Data analysis, 
 
 ## 📊 SQL Projects
 
-### ** Chocolate Sales Analysis (SQL)
+### [ Chocolate Sales Analysis (SQL)](https://github.com/Keerthanakp-data/Data-Science-Projects/tree/main/Chocolate%20Sales%20Analysis%20in%20SQL)
 - Analyzed regional sales patterns to identify top‑performing products and seasonal demand.
 - Delivered insights that support inventory planning and targeted promotions.
 
