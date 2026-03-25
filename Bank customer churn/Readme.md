@@ -79,14 +79,13 @@ This distinction between a model that looks good on paper and one that works in 
 ## 3. Exploratory Data Analysis (EDA)
 
 Key findings from statistical analysis and visualisation:
-- Finding Business Implicatio nCustomers aged 40–50 churn at significantly higher rates.
-- Target this age group with premium account offers and personalised outreach
-- Single-product customers churn most . Cross-selling is a retention strategy.
+- Finding Business Implication Customers aged 40–50 churn at significantly higher rates.
+- Single-product customers churn most . 
 - Customers with 2–3 products churn far less.
 - Inactive members are far more likely to churn
 - Re-engagement programme needed — rewards for regular transactions
 - German customers churn at ~2x the rate of French/Spanish
-- Regional product-market mismatch — review German product offering
+- Regional product-market mismatch — 
 - High balance customers churn more than expected
 - Counter-intuitive — suggests competitor products may be more attractive for wealthy customers
 
