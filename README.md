@@ -8,7 +8,7 @@ This repository showcases projects that demonstrate my skills in Data analysis, 
 - Analyzed regional sales patterns to identify top‑performing products and seasonal demand.
 - Delivered insights that support inventory planning and targeted promotions.
 
-###  [Spotify Churn Analysis (SQL)](https://github.com/Keerthanakp-data/Data-Science-Projects/tree/main/Chocolate%20Sales%20Analysis%20in%20SQL)
+###  [Spotify Churn Analysis (SQL)](https://github.com/Keerthanakp-data/Data-Science-Projects/tree/main/Spotify%20Churn%20Analysis%20in%20SQL)
 - Investigated churn behavior using segmentation and retention metrics.
 - Highlighted high‑risk user groups to guide data‑driven retention strategies.
 
