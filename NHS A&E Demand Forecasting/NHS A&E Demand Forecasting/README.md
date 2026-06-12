@@ -180,7 +180,7 @@ pip install pandas prophet scikit-learn matplotlib openpyxl jupyter
 ## Author
 
 Keerthana KP  
-[LinkedIn](https://linkedin.com/in/yourprofile) | [GitHub](https://github.com/yourusername)
+[LinkedIn](www.linkedin.com/in/keerthana-kakkiriken-poothatta-942344114) 
 
 \---
 
